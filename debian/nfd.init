@@ -1,0 +1,137 @@
+#! /bin/sh
+
+### BEGIN INIT INFO
+# Provides:		nfd
+# Required-Start:	$remote_fs $syslog
+# Required-Stop:	$remote_fs $syslog
+# Default-Start:	2 3 4 5
+# Default-Stop:
+# Description:	        Start the NDN Forwarding Deamon
+# Short-Description:	NDN Forwarding Deamon
+### END INIT INFO
+
+set -e
+name="NDN Fowarding Daemon"
+# /etc/init.d/nfd: start and stop the NDN Forwarding Daemon
+
+umask 022
+
+if test -f /etc/default/nfd; then
+    . /etc/default/nfd
+fi
+
+. /lib/lsb/init-functions
+
+if [ -n "$2" ]; then
+    NFD_OPTS="$NFD_OPTS $2"
+fi
+
+# Are we running from init?
+run_by_init() {
+    ([ "$previous" ] && [ "$runlevel" ]) || [ "$runlevel" = S ]
+}
+
+check_for_upstart() {
+    if init_is_upstart; then
+	exit $1
+    fi
+}
+
+check_for_no_start() {
+    # forget it if we're trying to start, and /etc/nfd/nfd_not_to_be_run exists
+    if [ -e /etc/nfd/nfd_not_to_be_run ]; then
+	if [ "$1" = log_end_msg ]; then
+	    log_end_msg 0 || true
+	fi
+	if ! run_by_init; then
+	    log_action_msg "${name} server not in use (/etc/nfd/nfd_not_to_be_run)" || true
+	fi
+	exit 0
+    fi
+}
+
+export PATH="${PATH:+$PATH:}/usr/sbin:/sbin"
+
+case "$1" in
+  start)
+	check_for_upstart 1
+	check_for_no_start
+	log_daemon_msg "Starting ${name} server" "nfd" || true
+	if start-stop-daemon --start --quiet --oknodo --pidfile /var/run/nfd.pid --exec /usr/sbin/nfd -- $NFD_OPTS; then
+	    log_end_msg 0 || true
+	else
+	    log_end_msg 1 || true
+	fi
+	;;
+  stop)
+	check_for_upstart 0
+	log_daemon_msg "Stopping ${name} server" "nfd" || true
+	if start-stop-daemon --stop --quiet --oknodo --pidfile /var/run/nfd.pid; then
+	    log_end_msg 0 || true
+	else
+	    log_end_msg 1 || true
+	fi
+	;;
+
+  reload|force-reload)
+	check_for_upstart 1
+	check_for_no_start
+	log_daemon_msg "Reloading ${name} server's configuration" "nfd" || true
+	if start-stop-daemon --stop --signal 1 --quiet --oknodo --pidfile /var/run/nfd.pid --exec /usr/sbin/nfd; then
+	    log_end_msg 0 || true
+	else
+	    log_end_msg 1 || true
+	fi
+	;;
+
+  restart)
+	check_for_upstart 1
+	log_daemon_msg "Restarting ${name} server" "nfd" || true
+	start-stop-daemon --stop --quiet --oknodo --retry 30 --pidfile /var/run/nfd.pid
+	check_for_no_start log_end_msg
+	if start-stop-daemon --start --quiet --oknodo --pidfile /var/run/nfd.pid --exec /usr/sbin/nfd -- $NFD_OPTS; then
+	    log_end_msg 0 || true
+	else
+	    log_end_msg 1 || true
+	fi
+	;;
+
+  try-restart)
+	check_for_upstart 1
+	log_daemon_msg "Restarting ${name} server" "nfd" || true
+	RET=0
+	start-stop-daemon --stop --quiet --retry 30 --pidfile /var/run/nfd.pid || RET="$?"
+	case $RET in
+	    0)
+		# old daemon stopped
+		check_for_no_start log_end_msg
+		if start-stop-daemon --start --quiet --oknodo --pidfile /var/run/nfd.pid --exec /usr/sbin/nfd -- $NFD_OPTS; then
+		    log_end_msg 0 || true
+		else
+		    log_end_msg 1 || true
+		fi
+		;;
+	    1)
+		# daemon not running
+		log_progress_msg "(not running)" || true
+		log_end_msg 0 || true
+		;;
+	    *)
+		# failed to stop
+		log_progress_msg "(failed to stop)" || true
+		log_end_msg 1 || true
+		;;
+	esac
+	;;
+
+  status)
+	check_for_upstart 1
+	status_of_proc -p /var/run/nfd.pid /usr/sbin/nfd nfd && exit 0 || exit $?
+	;;
+
+  *)
+	log_action_msg "Usage: /etc/init.d/nfd {start|stop|reload|force-reload|restart|try-restart|status}" || true
+	exit 1
+esac
+
+exit 0

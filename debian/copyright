@@ -1,0 +1,60 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: nfd
+Source: https://named-data.net
+
+Files: *
+Copyright: 2013-2016 Alexander Afanasyev
+           2013-2016 Beichuan Zhang
+           2013-2016 Chengyu Fan
+           2013-2016 Christos Papadopoulos
+           2013-2016 Davide Pesavento
+           2013-2016 Eric Newberry
+           2013-2016 Giovanni Pau
+           2013-2016 Giulio Grassi
+           2013-2016 Hang Zhang
+           2013-2016 Haowei Yuan
+           2013-2016 Hila Ben
+           2013-2016 Ilya Moiseenko
+           2013-2016 Jerald Paul
+           2013-2016 João Pereira
+           2013-2016 Junxiao Shi
+           2013-2016 Lan Wang
+           2013-2016 Lixia Zhang
+           2013-2016 Mathias Gibbens
+           2013-2016 Minsheng Zhang
+           2013-2016 Patrick Crowley
+           2013-2016 Spencer Lee
+           2013-2016 Spyridon Mastorakis
+           2013-2016 Steve DiBenedetto
+           2013-2016 Syed Obaid
+           2013-2016 Tai-Lin Chu
+           2013-2016 Tian Song
+           2013-2016 Vince Lehman
+           2013-2016 Weiwei Liu
+           2013-2016 Wentao Shang
+           2013-2016 Yanbiao Li
+           2013-2016 Yi Huang
+           2013-2016 Yingdi Yu
+           2013-2016 Yukai Tu
+License: GPL-3.0+
+
+Files: debian/*
+Copyright: 2016 Niv Sardi <xaiki@endlessm.com>
+License: GPL-3.0+
+
+License: GPL-3.0+
+ This package is free software; you can redistribute it and/or
+ modify it under the terms of the GNU General Public
+ License as published by the Free Software Foundation; either
+ version 3 of the License, or (at your option) any later version.
+ .
+ This package is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ General Public License for more details.
+ .
+ You should have received a copy of the GNU General Public License
+ along with this program. If not, see <https://www.gnu.org/licenses/>.
+ .
+ On Debian systems, the complete text of the GNU General
+ Public License can be found in "/usr/share/common-licenses/LGPL-3".
