@@ -1,0 +1,21 @@
+#!/usr/bin/make -f
+# See debhelper(7) (uncomment to enable)
+# output every command that modifies files on the build system.
+#export DH_VERBOSE = 1
+
+# hardening=+all fails, so at least we should push the minimum
+export DEB_BUILD_MAINT_OPTIONS=hardening=+bindnow+relro+pie
+
+%:
+	dh $@  --buildsystem=waf --with=python2
+
+override_dh_auto_configure:
+	dh_auto_configure -- --without-websocket --without-libpcap
+
+override_dh_auto_install:
+	dh_auto_install $@
+	rm -rf debian/nfd/usr/bin/nfd-start
+	rm -rf debian/nfd/usr/bin/nfd-stop
+	mv debian/nfd/etc/ndn/nfd.conf.sample debian/nfd/etc/ndn/nfd.conf
+	mv debian/nfd/etc/ndn/autoconfig.conf.sample debian/nfd/etc/ndn/autoconfig.conf
+

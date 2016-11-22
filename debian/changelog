@@ -1,0 +1,11 @@
+nfd (0.5.0-1) experimental; urgency=medium
+
+  * Rebase on 0.5.0 for Endless release
+
+ -- Niv Sardi <xaiki@endlessm.com>  Wed, 21 Dec 2016 10:59:37 -0300
+
+nfd (0.5.0~git20161122-1) experimental; urgency=medium
+
+  * Initial release (Closes: #nnnn)
+
+ -- Niv Sardi <xaiki@endlessm.com>  Tue, 22 Nov 2016 16:18:39 -0300
