@@ -1,0 +1,6 @@
+nfd for Debian
+-------------
+
+NFD packaged for debian, uses systemd
+
+ -- Niv Sardi <xaiki@evilgiggle.com>, Mon, 12 Dec 2016 14:06:25 -0300
