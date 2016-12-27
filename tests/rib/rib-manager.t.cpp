@@ -25,12 +25,12 @@
 
 #include "rib/rib-manager.hpp"
 #include "manager-common-fixture.hpp"
+#include "core/random.hpp"
 
 #include <ndn-cxx/lp/tags.hpp>
 #include <ndn-cxx/mgmt/nfd/rib-entry.hpp>
 #include <ndn-cxx/mgmt/nfd/face-status.hpp>
 #include <ndn-cxx/mgmt/nfd/face-event-notification.hpp>
-#include <ndn-cxx/util/random.hpp>
 
 namespace nfd {
 namespace rib {
@@ -265,7 +265,6 @@ operator<<(std::ostream& os, const RibManagerFixture::CheckCommandResult& result
   return os;
 }
 
-BOOST_AUTO_TEST_SUITE(Rib)
 BOOST_AUTO_TEST_SUITE(TestRibManager)
 
 class AddTopPrefixFixture : public RibManagerFixture
@@ -483,11 +482,12 @@ operator!=(const RibEntry& left, const RibEntry& right)
 
 BOOST_FIXTURE_TEST_CASE(RibDataset, UnauthorizedRibManagerFixture)
 {
+  std::uniform_int_distribution<uint64_t> dist;
   uint64_t faceId = 0;
-  auto generateRoute = [&faceId] () -> Route {
+  auto generateRoute = [&dist, &faceId] () -> Route {
     Route route;
     route.faceId = ++faceId;
-    route.cost = ndn::random::generateWord64();
+    route.cost = dist(getGlobalRng());
     route.expires = time::steady_clock::TimePoint::max();
     return route;
   };
@@ -570,15 +570,10 @@ BOOST_AUTO_TEST_CASE(RemoveInvalidFaces)
 
   ndn::nfd::FaceStatus status;
   status.setFaceId(1);
+  std::vector<ndn::nfd::FaceStatus> activeFaces;
+  activeFaces.push_back(status);
 
-  auto data = makeData("/localhost/nfd/faces/list");
-  data->setContent(status.wireEncode());
-
-  auto buffer = make_shared<ndn::OBufferStream>();
-  buffer->write(reinterpret_cast<const char*>(data->getContent().value()),
-                data->getContent().value_size());
-
-  m_manager.removeInvalidFaces(buffer);
+  m_manager.removeInvalidFaces(activeFaces);
   advanceClocks(time::milliseconds(100));
   BOOST_REQUIRE_EQUAL(m_rib.size(), 1);
 
@@ -616,7 +611,6 @@ BOOST_AUTO_TEST_CASE(OnNotification)
 BOOST_AUTO_TEST_SUITE_END() // FaceMonitor
 
 BOOST_AUTO_TEST_SUITE_END() // TestRibManager
-BOOST_AUTO_TEST_SUITE_END() // Rib
 
 } // namespace tests
 } // namespace rib

@@ -28,8 +28,6 @@
 
 #include "base.hpp"
 
-#include <ndn-cxx/security/validator-null.hpp>
-
 namespace ndn {
 namespace tools {
 namespace autoconfig {
@@ -63,19 +61,22 @@ public:
 
 private:
   void
-  registerHubDiscoveryPrefix(const ConstBufferPtr& buffer);
+  collectMulticastFaces();
+
+  void
+  registerHubDiscoveryPrefix(const std::vector<ndn::nfd::FaceStatus>& dataset);
 
   void
   onRegisterSuccess();
 
   void
-  onRegisterFailure(const nfd::ControlResponse& response);
+  onRegisterFailure(const ControlResponse& response);
 
   void
   setStrategy();
 
   void
-  onSetStrategyFailure(const nfd::ControlResponse& response);
+  onSetStrategyFailure(const ControlResponse& response);
 
   // Start to look for a hub (NDN hub discovery first stage)
   void
@@ -85,10 +86,8 @@ private:
   onSuccess(Data& data);
 
 private:
-  size_t nRequestedRegs;
-  size_t nFinishedRegs;
-
-  ndn::ValidatorNull m_validator;
+  size_t m_nRequestedRegs;
+  size_t m_nFinishedRegs;
 };
 
 } // namespace autoconfig

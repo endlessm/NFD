@@ -24,27 +24,30 @@
  */
 
 #include "forwarder.hpp"
-#include "pit-algorithm.hpp"
-#include "core/logger.hpp"
-#include "core/random.hpp"
+#include "algorithm.hpp"
+#include "best-route-strategy2.hpp"
 #include "strategy.hpp"
+#include "core/logger.hpp"
 #include "table/cleanup.hpp"
 #include <ndn-cxx/lp/tags.hpp>
-#include <boost/random/uniform_int_distribution.hpp>
 
 namespace nfd {
 
 NFD_LOG_INIT("Forwarder");
+
+static Name
+getDefaultStrategyName()
+{
+  return fw::BestRouteStrategy2::getStrategyName();
+}
 
 Forwarder::Forwarder()
   : m_unsolicitedDataPolicy(new fw::DefaultUnsolicitedDataPolicy())
   , m_fib(m_nameTree)
   , m_pit(m_nameTree)
   , m_measurements(m_nameTree)
-  , m_strategyChoice(m_nameTree, fw::makeDefaultStrategy(*this))
+  , m_strategyChoice(*this)
 {
-  fw::installStrategies(*this);
-
   m_faceTable.afterAdd.connect([this] (Face& face) {
     face.afterReceiveInterest.connect(
       [this, &face] (const Interest& interest) {
@@ -63,6 +66,8 @@ Forwarder::Forwarder()
   m_faceTable.beforeRemove.connect([this] (Face& face) {
     cleanupOnFaceRemoval(m_nameTree, m_fib, m_pit, face);
   });
+
+  m_strategyChoice.setDefaultStrategy(getDefaultStrategyName());
 }
 
 Forwarder::~Forwarder() = default;
@@ -207,8 +212,10 @@ Forwarder::onContentStoreMiss(const Face& inFace, const shared_ptr<pit::Entry>& 
     // chosen NextHop face exists?
     Face* nextHopFace = m_faceTable.get(*nextHopTag);
     if (nextHopFace != nullptr) {
+      NFD_LOG_DEBUG("onContentStoreMiss interest=" << interest.getName() << " nexthop-faceid=" << nextHopFace->getId());
       // go to outgoing Interest pipeline
-      this->onOutgoingInterest(pitEntry, *nextHopFace);
+      // scope control is unnecessary, because privileged app explicitly wants to forward
+      this->onOutgoingInterest(pitEntry, *nextHopFace, interest);
     }
     return;
   }
@@ -235,50 +242,16 @@ Forwarder::onContentStoreHit(const Face& inFace, const shared_ptr<pit::Entry>& p
 }
 
 void
-Forwarder::onOutgoingInterest(const shared_ptr<pit::Entry>& pitEntry, Face& outFace,
-                              bool wantNewNonce)
+Forwarder::onOutgoingInterest(const shared_ptr<pit::Entry>& pitEntry, Face& outFace, const Interest& interest)
 {
-  if (outFace.getId() == face::INVALID_FACEID) {
-    NFD_LOG_WARN("onOutgoingInterest face=invalid interest=" << pitEntry->getName());
-    return;
-  }
   NFD_LOG_DEBUG("onOutgoingInterest face=" << outFace.getId() <<
                 " interest=" << pitEntry->getName());
 
-  // scope control
-  if (fw::violatesScope(*pitEntry, outFace)) {
-    NFD_LOG_DEBUG("onOutgoingInterest face=" << outFace.getId() <<
-                  " interest=" << pitEntry->getName() << " violates scope");
-    return;
-  }
-
-  // pick Interest
-  // The outgoing Interest picked is the last incoming Interest that does not come from outFace.
-  // If all in-records come from outFace, it's fine to pick that.
-  // This happens when there's only one in-record that comes from outFace.
-  // The legit use is for vehicular network; otherwise, strategy shouldn't send to the sole inFace.
-  pit::InRecordCollection::iterator pickedInRecord = std::max_element(
-    pitEntry->in_begin(), pitEntry->in_end(),
-    [&outFace] (const pit::InRecord& a, const pit::InRecord& b) {
-      bool isOutFaceA = &a.getFace() == &outFace;
-      bool isOutFaceB = &b.getFace() == &outFace;
-      return (isOutFaceA > isOutFaceB) ||
-             (isOutFaceA == isOutFaceB && a.getLastRenewed() < b.getLastRenewed());
-    });
-  BOOST_ASSERT(pickedInRecord != pitEntry->in_end());
-  auto interest = const_pointer_cast<Interest>(pickedInRecord->getInterest().shared_from_this());
-
-  if (wantNewNonce) {
-    interest = make_shared<Interest>(*interest);
-    static boost::random::uniform_int_distribution<uint32_t> dist;
-    interest->setNonce(dist(getGlobalRng()));
-  }
-
   // insert out-record
-  pitEntry->insertOrUpdateOutRecord(outFace, *interest);
+  pitEntry->insertOrUpdateOutRecord(outFace, interest);
 
   // send Interest
-  outFace.sendInterest(*interest);
+  outFace.sendInterest(interest);
   ++m_counters.nOutInterests;
 }
 

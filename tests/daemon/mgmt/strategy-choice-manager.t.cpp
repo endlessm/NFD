@@ -24,19 +24,19 @@
  */
 
 #include "mgmt/strategy-choice-manager.hpp"
-#include "nfd-manager-common-fixture.hpp"
 
+#include "core/random.hpp"
 #include "face/face.hpp"
 #include "face/internal-face.hpp"
+#include "fw/strategy.hpp"
 #include "table/name-tree.hpp"
 #include "table/strategy-choice.hpp"
-#include "fw/strategy.hpp"
 
+#include "nfd-manager-common-fixture.hpp"
 #include "tests/daemon/face/dummy-face.hpp"
 #include "tests/daemon/fw/dummy-strategy.hpp"
 #include "tests/daemon/fw/install-strategy.hpp"
 
-#include <ndn-cxx/util/random.hpp>
 #include <ndn-cxx/mgmt/nfd/strategy-choice.hpp>
 
 namespace nfd {
@@ -77,8 +77,8 @@ protected:
   StrategyChoiceManager m_manager;
 };
 
-BOOST_FIXTURE_TEST_SUITE(Mgmt, StrategyChoiceManagerFixture)
-BOOST_AUTO_TEST_SUITE(TestStrategyChoiceManager)
+BOOST_AUTO_TEST_SUITE(Mgmt)
+BOOST_FIXTURE_TEST_SUITE(TestStrategyChoiceManager, StrategyChoiceManagerFixture)
 
 BOOST_AUTO_TEST_CASE(SetStrategy)
 {
@@ -191,19 +191,20 @@ operator<<(std::ostream &os, const StrategyChoice& entry)
   return os;
 }
 
-BOOST_AUTO_TEST_CASE(ListChoices)
+BOOST_AUTO_TEST_CASE(StrategyChoiceDataset)
 {
   size_t nPreInsertedStrategies = m_strategyChoice.size(); // the best-route strategy
   std::set<Name> actualNames, actualStrategies;
-  for (auto&& entry : m_strategyChoice) {
+  for (const auto& entry : m_strategyChoice) {
     actualNames.insert(entry.getPrefix());
     actualStrategies.insert(entry.getStrategyName());
   }
 
+  std::uniform_int_distribution<uint64_t> dist;
   size_t nEntries = 1024;
   for (size_t i = 0 ; i < nEntries ; i++) {
     auto name = Name("test-name").appendSegment(i);
-    auto strategy = Name("test-strategy").appendSegment(ndn::random::generateWord64());
+    auto strategy = Name("test-strategy").appendSegment(dist(getGlobalRng()));
     auto entry = ndn::nfd::StrategyChoice().setName(name).setStrategy(strategy);
     actualNames.insert(name);
     actualStrategies.insert(strategy);
@@ -239,7 +240,6 @@ BOOST_AUTO_TEST_CASE(ListChoices)
 
   BOOST_CHECK_EQUAL(actualNames.size(), 0);
   BOOST_CHECK_EQUAL(actualStrategies.size(), 0);
-
   BOOST_CHECK_EQUAL_COLLECTIONS(receivedRecords.begin(), receivedRecords.end(),
                                 expectedRecords.begin(), expectedRecords.end());
 }

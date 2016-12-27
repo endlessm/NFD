@@ -24,8 +24,8 @@
  */
 
 #include "face-manager.hpp"
-
 #include "core/network-interface.hpp"
+#include "core/network-interface-predicate.hpp"
 #include "face/generic-link-service.hpp"
 #include "face/tcp-factory.hpp"
 #include "face/udp-factory.hpp"
@@ -33,8 +33,6 @@
 
 #include <ndn-cxx/lp/tags.hpp>
 #include <ndn-cxx/mgmt/nfd/channel-status.hpp>
-#include <ndn-cxx/mgmt/nfd/face-status.hpp>
-#include <ndn-cxx/mgmt/nfd/face-event-notification.hpp>
 
 #ifdef HAVE_UNIX_SOCKETS
 #include "face/unix-stream-factory.hpp"
@@ -77,8 +75,13 @@ FaceManager::FaceManager(FaceTable& faceTable, Dispatcher& dispatcher, CommandAu
   registerStatusDatasetHandler("query", bind(&FaceManager::queryFaces, this, _1, _2, _3));
 
   m_postNotification = registerNotificationStream("events");
-  m_faceAddConn = m_faceTable.afterAdd.connect(bind(&FaceManager::notifyAddFace, this, _1));
-  m_faceRemoveConn = m_faceTable.beforeRemove.connect(bind(&FaceManager::notifyRemoveFace, this, _1));
+  m_faceAddConn = m_faceTable.afterAdd.connect([this] (const Face& face) {
+    connectFaceStateChangeSignal(face);
+    notifyFaceEvent(face, ndn::nfd::FACE_EVENT_CREATED);
+  });
+  m_faceRemoveConn = m_faceTable.beforeRemove.connect([this] (const Face& face) {
+    notifyFaceEvent(face, ndn::nfd::FACE_EVENT_DESTROYED);
+  });
 }
 
 void
@@ -493,13 +496,6 @@ FaceManager::collectFaceStatus(const Face& face, const time::steady_clock::TimeP
         .setNInBytes(counters.nInBytes)
         .setNOutBytes(counters.nOutBytes);
 
-  // Set Flag bits
-  auto linkService = dynamic_cast<face::GenericLinkService*>(face.getLinkService());
-  if (linkService != nullptr) {
-    auto linkServiceOptions = linkService->getOptions();
-    status.setFlagBit(ndn::nfd::BIT_LOCAL_FIELDS_ENABLED, linkServiceOptions.allowLocalFields);
-  }
-
   return status;
 }
 
@@ -513,26 +509,43 @@ FaceManager::collectFaceProperties(const Face& face, FaceTraits& traits)
         .setFaceScope(face.getScope())
         .setFacePersistency(face.getPersistency())
         .setLinkType(face.getLinkType());
+
+  // Set Flag bits
+  auto linkService = dynamic_cast<face::GenericLinkService*>(face.getLinkService());
+  if (linkService != nullptr) {
+    auto linkServiceOptions = linkService->getOptions();
+    traits.setFlagBit(ndn::nfd::BIT_LOCAL_FIELDS_ENABLED, linkServiceOptions.allowLocalFields);
+  }
 }
 
 void
-FaceManager::notifyAddFace(const Face& face)
+FaceManager::notifyFaceEvent(const Face& face, ndn::nfd::FaceEventKind kind)
 {
   ndn::nfd::FaceEventNotification notification;
-  notification.setKind(ndn::nfd::FACE_EVENT_CREATED);
+  notification.setKind(kind);
   collectFaceProperties(face, notification);
 
   m_postNotification(notification.wireEncode());
 }
 
 void
-FaceManager::notifyRemoveFace(const Face& face)
+FaceManager::connectFaceStateChangeSignal(const Face& face)
 {
-  ndn::nfd::FaceEventNotification notification;
-  notification.setKind(ndn::nfd::FACE_EVENT_DESTROYED);
-  collectFaceProperties(face, notification);
+  FaceId faceId = face.getId();
+  m_faceStateChangeConn[faceId] = face.afterStateChange.connect(
+    [this, faceId] (face::FaceState oldState, face::FaceState newState) {
+      const Face& face = *m_faceTable.get(faceId);
 
-  m_postNotification(notification.wireEncode());
+      if (newState == face::FaceState::UP) {
+        notifyFaceEvent(face, ndn::nfd::FACE_EVENT_UP);
+      }
+      else if (newState == face::FaceState::DOWN) {
+        notifyFaceEvent(face, ndn::nfd::FACE_EVENT_DOWN);
+      }
+      else if (newState == face::FaceState::CLOSED) {
+        m_faceStateChangeConn.erase(faceId);
+      }
+    });
 }
 
 void
@@ -872,6 +885,7 @@ FaceManager::processSectionEther(const ConfigSection& configSection, bool isDryR
   // }
 
 #if defined(HAVE_LIBPCAP)
+  NetworkInterfacePredicate nicPredicate;
   bool useMcast = true;
   ethernet::Address mcastGroup(ethernet::getDefaultMulticastAddress());
 
@@ -886,6 +900,12 @@ FaceManager::processSectionEther(const ConfigSection& configSection, bool isDryR
                                                 i.first + "\" in \"ether\" section"));
       }
       NFD_LOG_TRACE("Ethernet multicast group set to " << mcastGroup);
+    }
+    else if (i.first == "whitelist") {
+      nicPredicate.parseWhitelist(i.second);
+    }
+    else if (i.first == "blacklist") {
+      nicPredicate.parseBlacklist(i.second);
     }
     else {
       BOOST_THROW_EXCEPTION(ConfigFile::Error("Unrecognized option \"" +
@@ -910,7 +930,7 @@ FaceManager::processSectionEther(const ConfigSection& configSection, bool isDryR
 
     if (useMcast) {
       for (const auto& nic : nicList) {
-        if (nic.isUp() && nic.isMulticastCapable()) {
+        if (nic.isUp() && nic.isMulticastCapable() && nicPredicate(nic)) {
           try {
             auto newFace = factory->createMulticastFace(nic, mcastGroup);
             m_faceTable.add(newFace);

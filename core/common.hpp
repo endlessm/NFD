@@ -33,11 +33,13 @@
 #define PUBLIC_WITH_TESTS_ELSE_PROTECTED public
 #define PUBLIC_WITH_TESTS_ELSE_PRIVATE public
 #define PROTECTED_WITH_TESTS_ELSE_PRIVATE protected
+#define FINAL_UNLESS_WITH_TESTS
 #else
 #define VIRTUAL_WITH_TESTS
 #define PUBLIC_WITH_TESTS_ELSE_PROTECTED protected
 #define PUBLIC_WITH_TESTS_ELSE_PRIVATE private
 #define PROTECTED_WITH_TESTS_ELSE_PRIVATE private
+#define FINAL_UNLESS_WITH_TESTS final
 #endif
 
 #include <cstddef>
@@ -63,7 +65,6 @@
 #include <ndn-cxx/util/face-uri.hpp>
 #include <ndn-cxx/util/signal.hpp>
 
-#include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
 #include <boost/assert.hpp>
 #include <boost/lexical_cast.hpp>

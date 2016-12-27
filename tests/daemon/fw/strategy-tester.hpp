@@ -23,8 +23,8 @@
  * NFD, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef NFD_TESTS_NFD_FW_STRATEGY_TESTER_HPP
-#define NFD_TESTS_NFD_FW_STRATEGY_TESTER_HPP
+#ifndef NFD_TESTS_DAEMON_FW_STRATEGY_TESTER_HPP
+#define NFD_TESTS_DAEMON_FW_STRATEGY_TESTER_HPP
 
 #include <boost/tuple/tuple_comparison.hpp>
 #include "fw/strategy.hpp"
@@ -43,7 +43,7 @@ class StrategyTester : public S
 public:
   explicit
   StrategyTester(Forwarder& forwarder)
-    : S(forwarder, Name(S::STRATEGY_NAME).append("tester"))
+    : S(forwarder, Name(S::getStrategyName()).append("tester"))
   {
   }
 
@@ -52,12 +52,11 @@ public:
 
 protected:
   virtual void
-  sendInterest(const shared_ptr<pit::Entry>& pitEntry,
-               Face& outFace,
-               bool wantNewNonce = false) override
+  sendInterest(const shared_ptr<pit::Entry>& pitEntry, Face& outFace,
+               const Interest& interest) override
   {
-    sendInterestHistory.push_back({pitEntry->getInterest(), outFace.getId(), wantNewNonce});
-    pitEntry->insertOrUpdateOutRecord(outFace, pitEntry->getInterest());
+    sendInterestHistory.push_back({pitEntry->getInterest(), outFace.getId(), interest});
+    pitEntry->insertOrUpdateOutRecord(outFace, interest);
     afterAction();
   }
 
@@ -82,7 +81,7 @@ public:
   {
     Interest pitInterest;
     FaceId outFaceId;
-    bool wantNewNonce;
+    Interest interest;
   };
   std::vector<SendInterestArgs> sendInterestHistory;
 
@@ -105,4 +104,4 @@ public:
 } // namespace fw
 } // namespace nfd
 
-#endif // NFD_TESTS_NFD_FW_STRATEGY_TESTER_HPP
+#endif // NFD_TESTS_DAEMON_FW_STRATEGY_TESTER_HPP

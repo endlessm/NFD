@@ -52,6 +52,14 @@ BOOST_AUTO_TEST_SUITE_END() // Xml
 
 BOOST_AUTO_TEST_SUITE(Text)
 
+BOOST_AUTO_TEST_CASE(Space)
+{
+  output_test_stream os;
+  os << 'A' << text::Spaces{-1} << 'B' << text::Spaces{0} << 'C' << text::Spaces{5} << 'D';
+
+  BOOST_CHECK(os.is_equal("ABC     D"));
+}
+
 BOOST_AUTO_TEST_CASE(Sep)
 {
   output_test_stream os;

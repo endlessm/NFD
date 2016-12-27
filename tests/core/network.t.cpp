@@ -1,6 +1,6 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /**
- * Copyright (c) 2014-2015,  Regents of the University of California,
+ * Copyright (c) 2014-2016,  Regents of the University of California,
  *                           Arizona Board of Regents,
  *                           Colorado State University,
  *                           University Pierre & Marie Curie, Sorbonne University,
@@ -144,7 +144,32 @@ BOOST_AUTO_TEST_CASE(Comparisons)
                  boost::lexical_cast<Network>("2001:db8:3f9:0::/64"));
 }
 
-BOOST_AUTO_TEST_SUITE_END() // CoreNetwork
+BOOST_AUTO_TEST_CASE(IsValidCidr)
+{
+  BOOST_CHECK_EQUAL(Network::isValidCidr("192.0.0.0/24"), true);
+  BOOST_CHECK_EQUAL(Network::isValidCidr("192.1.2.3/32"), true);
+  BOOST_CHECK_EQUAL(Network::isValidCidr("0.0.0.0/0"), true);
+  BOOST_CHECK_EQUAL(Network::isValidCidr(""), false);
+  BOOST_CHECK_EQUAL(Network::isValidCidr("192.0.0.0/24/8"), false);
+  BOOST_CHECK_EQUAL(Network::isValidCidr("/192.0.0.0/24"), false);
+  BOOST_CHECK_EQUAL(Network::isValidCidr("192.0.0.0/+24"), false);
+  BOOST_CHECK_EQUAL(Network::isValidCidr("192.0.0.0/-24"), false);
+  BOOST_CHECK_EQUAL(Network::isValidCidr("192.0.0.0/ 24"), false);
+  BOOST_CHECK_EQUAL(Network::isValidCidr("192.0.0.0/24a"), false);
+  BOOST_CHECK_EQUAL(Network::isValidCidr("192.0.0.0/0x42"), false);
+  BOOST_CHECK_EQUAL(Network::isValidCidr("192.0.0.0/24.42"), false);
+  BOOST_CHECK_EQUAL(Network::isValidCidr("192.0.0.0/foo"), false);
+  BOOST_CHECK_EQUAL(Network::isValidCidr("192.0.0.0/33"), false);
+  BOOST_CHECK_EQUAL(Network::isValidCidr("192.0.0.0/999999999999999"), false);
+  BOOST_CHECK_EQUAL(Network::isValidCidr("192.0.0.0/"), false);
+  BOOST_CHECK_EQUAL(Network::isValidCidr("192.0.0.0"), false);
+  BOOST_CHECK_EQUAL(Network::isValidCidr("foo/4"), false);
+  BOOST_CHECK_EQUAL(Network::isValidCidr("foo/"), false);
+  BOOST_CHECK_EQUAL(Network::isValidCidr("foo"), false);
+  BOOST_CHECK_EQUAL(Network::isValidCidr("256.0.256.0/24"), false);
+}
+
+BOOST_AUTO_TEST_SUITE_END() // TestNetwork
 
 } // namespace tests
 } // namespace nfd

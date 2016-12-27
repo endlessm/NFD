@@ -24,17 +24,23 @@
  */
 
 #include "best-route-strategy.hpp"
-#include "pit-algorithm.hpp"
+#include "algorithm.hpp"
 
 namespace nfd {
 namespace fw {
 
-const Name BestRouteStrategy::STRATEGY_NAME("ndn:/localhost/nfd/strategy/best-route/%FD%01");
 NFD_REGISTER_STRATEGY(BestRouteStrategy);
 
 BestRouteStrategy::BestRouteStrategy(Forwarder& forwarder, const Name& name)
   : Strategy(forwarder, name)
 {
+}
+
+const Name&
+BestRouteStrategy::getStrategyName()
+{
+  static Name strategyName("/localhost/nfd/strategy/best-route/%FD%01");
+  return strategyName;
 }
 
 void
@@ -48,16 +54,17 @@ BestRouteStrategy::afterReceiveInterest(const Face& inFace, const Interest& inte
 
   const fib::Entry& fibEntry = this->lookupFib(*pitEntry);
   const fib::NextHopList& nexthops = fibEntry.getNextHops();
-  fib::NextHopList::const_iterator it = std::find_if(nexthops.begin(), nexthops.end(),
-    [&pitEntry] (const fib::NextHop& nexthop) { return canForwardToLegacy(*pitEntry, nexthop.getFace()); });
 
-  if (it == nexthops.end()) {
-    this->rejectPendingInterest(pitEntry);
-    return;
+  for (fib::NextHopList::const_iterator it = nexthops.begin(); it != nexthops.end(); ++it) {
+    Face& outFace = it->getFace();
+    if (!wouldViolateScope(inFace, interest, outFace) &&
+        canForwardToLegacy(*pitEntry, outFace)) {
+      this->sendInterest(pitEntry, outFace, interest);
+      return;
+    }
   }
 
-  Face& outFace = it->getFace();
-  this->sendInterest(pitEntry, outFace);
+  this->rejectPendingInterest(pitEntry);
 }
 
 } // namespace fw

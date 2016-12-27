@@ -26,11 +26,37 @@
 #include "cs-policy.hpp"
 #include "cs.hpp"
 #include "core/logger.hpp"
+#include <boost/range/adaptor/map.hpp>
+#include <boost/range/algorithm/copy.hpp>
 
 NFD_LOG_INIT("CsPolicy");
 
 namespace nfd {
 namespace cs {
+
+Policy::Registry&
+Policy::getRegistry()
+{
+  static Registry registry;
+  return registry;
+}
+
+unique_ptr<Policy>
+Policy::create(const std::string& policyName)
+{
+  Registry& registry = getRegistry();
+  auto i = registry.find(policyName);
+  return i == registry.end() ? nullptr : i->second();
+}
+
+std::set<std::string>
+Policy::getPolicyNames()
+{
+  std::set<std::string> policyNames;
+  boost::copy(getRegistry() | boost::adaptors::map_keys,
+              std::inserter(policyNames, policyNames.end()));
+  return policyNames;
+}
 
 Policy::Policy(const std::string& policyName)
   : m_policyName(policyName)

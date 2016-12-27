@@ -24,17 +24,23 @@
  */
 
 #include "multicast-strategy.hpp"
-#include "pit-algorithm.hpp"
+#include "algorithm.hpp"
 
 namespace nfd {
 namespace fw {
 
-const Name MulticastStrategy::STRATEGY_NAME("ndn:/localhost/nfd/strategy/multicast/%FD%01");
 NFD_REGISTER_STRATEGY(MulticastStrategy);
 
 MulticastStrategy::MulticastStrategy(Forwarder& forwarder, const Name& name)
   : Strategy(forwarder, name)
 {
+}
+
+const Name&
+MulticastStrategy::getStrategyName()
+{
+  static Name strategyName("/localhost/nfd/strategy/multicast/%FD%01");
+  return strategyName;
 }
 
 void
@@ -46,8 +52,9 @@ MulticastStrategy::afterReceiveInterest(const Face& inFace, const Interest& inte
 
   for (fib::NextHopList::const_iterator it = nexthops.begin(); it != nexthops.end(); ++it) {
     Face& outFace = it->getFace();
-    if (canForwardToLegacy(*pitEntry, outFace)) {
-      this->sendInterest(pitEntry, outFace);
+    if (!wouldViolateScope(inFace, interest, outFace) &&
+        canForwardToLegacy(*pitEntry, outFace)) {
+      this->sendInterest(pitEntry, outFace, interest);
     }
   }
 

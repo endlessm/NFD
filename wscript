@@ -66,8 +66,7 @@ def options(opt):
 def configure(conf):
     conf.load(['compiler_cxx', 'gnu_dirs',
                'default-compiler-flags', 'compiler-features', 'type_traits',
-               'pch', 'sanitizers', 'boost', 'boost-kqueue',
-               'dependency-checker', 'websocket',
+               'pch', 'boost', 'boost-kqueue', 'dependency-checker', 'websocket',
                'doxygen', 'sphinx_build'])
 
     conf.find_program('bash', var='BASH')
@@ -111,7 +110,7 @@ main(int, char**)
     conf.check_cxx(header_name='ifaddrs.h', mandatory=False)
     conf.check_cxx(header_name='valgrind/valgrind.h', define_name='HAVE_VALGRIND', mandatory=False)
 
-    boost_libs = 'system chrono program_options random thread log log_setup'
+    boost_libs = 'system chrono program_options thread log log_setup'
     if conf.options.with_tests:
         conf.env['WITH_TESTS'] = 1
         conf.define('WITH_TESTS', 1)
@@ -153,6 +152,8 @@ main(int, char**)
         conf.env['HAVE_CUSTOM_LOGGER'] = 1
 
     conf.load('coverage')
+
+    conf.load('sanitizers')
 
     conf.define('DEFAULT_CONFIG_FILE', '%s/ndn/nfd.conf' % conf.env['SYSCONFDIR'])
 
@@ -248,6 +249,14 @@ def build(bld):
             source=bld.path.ant_glob('docs/manpages/**/*.rst'),
             install_path="${MANDIR}/",
             VERSION=VERSION)
+        bld.symlink_as('${MANDIR}/man1/nfdc-channel.1', 'nfdc-face.1')
+        bld.symlink_as('${MANDIR}/man1/nfdc-create.1', 'nfdc-face.1')
+        bld.symlink_as('${MANDIR}/man1/nfdc-destroy.1', 'nfdc-face.1')
+        bld.symlink_as('${MANDIR}/man1/nfdc-fib.1', 'nfdc-route.1')
+        bld.symlink_as('${MANDIR}/man1/nfdc-register.1', 'nfdc-route.1')
+        bld.symlink_as('${MANDIR}/man1/nfdc-unregister.1', 'nfdc-route.1')
+        bld.symlink_as('${MANDIR}/man1/nfdc-set-strategy.1', 'nfdc-strategy.1')
+        bld.symlink_as('${MANDIR}/man1/nfdc-unset-strategy.1', 'nfdc-strategy.1')
 
     bld.install_files("${SYSCONFDIR}/ndn", "autoconfig.conf.sample")
 

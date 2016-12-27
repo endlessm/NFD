@@ -23,41 +23,31 @@
  * NFD, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "strategy-registry.hpp"
-#include "best-route-strategy2.hpp"
+#ifndef NFD_TOOLS_NFDC_HELP_HPP
+#define NFD_TOOLS_NFDC_HELP_HPP
+
+#include "command-parser.hpp"
 
 namespace nfd {
-namespace fw {
-
-unique_ptr<Strategy>
-makeDefaultStrategy(Forwarder& forwarder)
-{
-  return make_unique<BestRouteStrategy2>(ref(forwarder));
-}
-
-static std::map<Name, StrategyCreateFunc>&
-getStrategyFactories()
-{
-  static std::map<Name, StrategyCreateFunc> strategyFactories;
-  return strategyFactories;
-}
+namespace tools {
+namespace nfdc {
 
 void
-registerStrategyImpl(const Name& strategyName, const StrategyCreateFunc& createFunc)
-{
-  getStrategyFactories().insert({strategyName, createFunc});
-}
+helpList(std::ostream& os, const CommandParser& parser,
+         ParseMode mode = ParseMode::ONE_SHOT, const std::string& noun = "");
 
+/** \brief the 'help' command
+ */
+int
+help(ExecuteContext& ctx, const CommandParser& parser, std::ostream& os);
+
+/** \brief registers 'help' command
+ */
 void
-installStrategies(Forwarder& forwarder)
-{
-  StrategyChoice& sc = forwarder.getStrategyChoice();
-  for (const auto& pair : getStrategyFactories()) {
-    if (!sc.hasStrategy(pair.first, true)) {
-      sc.install(pair.second(forwarder));
-    }
-  }
-}
+registerHelpCommand(CommandParser& parser);
 
-} // namespace fw
+} // namespace nfdc
+} // namespace tools
 } // namespace nfd
+
+#endif // NFD_TOOLS_NFDC_HELP_HPP

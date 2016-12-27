@@ -38,6 +38,27 @@ class Cs;
  */
 class Policy : noncopyable
 {
+public: // registry
+  template<typename P>
+  static void
+  registerPolicy(const std::string& policyName = P::POLICY_NAME)
+  {
+    Registry& registry = getRegistry();
+    BOOST_ASSERT(registry.count(policyName) == 0);
+    registry[policyName] = [] { return make_unique<P>(); };
+  }
+
+  /** \return a cs::Policy identified by \p policyName,
+   *          or nullptr if \p policyName is unknown
+   */
+  static unique_ptr<Policy>
+  create(const std::string& policyName);
+
+  /** \return a list of available policy names
+   */
+  static std::set<std::string>
+  getPolicyNames();
+
 public:
   explicit
   Policy(const std::string& policyName);
@@ -155,6 +176,13 @@ protected:
 protected:
   DECLARE_SIGNAL_EMIT(beforeEvict)
 
+private: // registry
+  typedef std::function<unique_ptr<Policy>()> CreateFunc;
+  typedef std::map<std::string, CreateFunc> Registry; // indexed by policy name
+
+  static Registry&
+  getRegistry();
+
 private:
   std::string m_policyName;
   size_t m_limit;
@@ -187,5 +215,18 @@ Policy::getLimit() const
 
 } // namespace cs
 } // namespace nfd
+
+/** \brief registers a CS policy
+ *  \param P a subclass of nfd::cs::Policy
+ */
+#define NFD_REGISTER_CS_POLICY(P)                      \
+static class NfdAuto ## P ## CsPolicyRegistrationClass \
+{                                                      \
+public:                                                \
+  NfdAuto ## P ## CsPolicyRegistrationClass()          \
+  {                                                    \
+    ::nfd::cs::Policy::registerPolicy<P>();            \
+  }                                                    \
+} g_nfdAuto ## P ## CsPolicyRegistrationVariable
 
 #endif // NFD_DAEMON_TABLE_CS_POLICY_HPP

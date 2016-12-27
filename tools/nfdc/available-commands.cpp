@@ -24,86 +24,40 @@
  */
 
 #include "available-commands.hpp"
-#include "status-report.hpp"
-#include "status-main.hpp"
+#include "help.hpp"
+#include "status.hpp"
+#include "legacy-status.hpp"
 #include "legacy-nfdc.hpp"
 
 namespace nfd {
 namespace tools {
 namespace nfdc {
 
-static int
-statusReport(ExecuteContext& ctx)
-{
-  ReportFormat fmt = ctx.args.get<ReportFormat>("format", ReportFormat::TEXT);
-  switch (fmt) {
-    case ReportFormat::XML:
-      return statusMain(std::vector<std::string>{"-x"}, ctx.face, ctx.keyChain);
-    case ReportFormat::TEXT:
-      return statusMain(std::vector<std::string>{}, ctx.face, ctx.keyChain);
-  }
-  BOOST_ASSERT(false);
-  return 1;
-}
-
-static int
-statusList(ExecuteContext& ctx, const std::string& option)
-{
-  return statusMain(std::vector<std::string>{option}, ctx.face, ctx.keyChain);
-}
-
-static int
-legacyNfdStatus(ExecuteContext& ctx)
-{
-  auto args = ctx.args.get<std::vector<std::string>>("args");
-  return statusMain(args, ctx.face, ctx.keyChain);
-}
-
 void
 registerCommands(CommandParser& parser)
 {
-  CommandDefinition defStatusReport("status", "report");
-  defStatusReport
-    .addArg("format", ArgValueType::REPORT_FORMAT, Required::NO, Positional::YES);
-  parser.addCommand(defStatusReport, &statusReport);
+  registerHelpCommand(parser);
+  registerStatusCommands(parser);
+  registerLegacyStatusCommand(parser);
 
-  struct StatusCommandDefinition
+  struct LegacyNfdcCommandDefinition
   {
-    std::string noun;
-    std::string verb;
-    std::string legacyOption;
+    std::string subcommand;
+    std::string title;
   };
-  const std::vector<StatusCommandDefinition> statusCommands{
-    {"status", "show", "-v"},
-    {"face", "list", "-f"},
-    {"channel", "list", "-c"},
-    {"strategy", "list", "-s"},
-    {"fib", "list", "-b"},
-    {"route", "list", "-r"}
+  const std::vector<LegacyNfdcCommandDefinition> legacyNfdcSubcommands{
+    {"register", "register a prefix"},
+    {"unregister", "unregister a prefix"},
+    {"create", "create a face"},
+    {"destroy", "destroy a face"},
+    {"set-strategy", "set strategy choice on namespace"},
+    {"unset-strategy", "unset strategy choice on namespace"},
+    {"add-nexthop", "add FIB nexthop"},
+    {"remove-nexthop", "remove FIB nexthop"}
   };
-  for (const StatusCommandDefinition& scd : statusCommands) {
-    CommandDefinition def(scd.noun, scd.verb);
-    parser.addCommand(def, bind(&statusList, _1, scd.legacyOption));
-  }
-  parser.addAlias("status", "show", "list");
-
-  CommandDefinition defLegacyNfdStatus("legacy-nfd-status", "");
-  defLegacyNfdStatus
-    .addArg("args", ArgValueType::ANY, Required::NO, Positional::YES);
-  parser.addCommand(defLegacyNfdStatus, &legacyNfdStatus);
-
-  const std::vector<std::string> legacyNfdcSubcommands{
-    "register",
-    "unregister",
-    "create",
-    "destroy",
-    "set-strategy",
-    "unset-strategy",
-    "add-nexthop",
-    "remove-nexthop"
-  };
-  for (const std::string& subcommand : legacyNfdcSubcommands) {
-    CommandDefinition def(subcommand, "");
+  for (const LegacyNfdcCommandDefinition& lncd : legacyNfdcSubcommands) {
+    CommandDefinition def(lncd.subcommand, "");
+    def.setTitle(lncd.title);
     def.addArg("args", ArgValueType::ANY, Required::NO, Positional::YES);
     parser.addCommand(def, &legacyNfdcMain);
   }

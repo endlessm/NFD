@@ -1,0 +1,11 @@
+#!/bin/sh
+set -e
+
+if ! ndnsec-get-default >/dev/null
+then # generate keys for this machine
+  ndnsec-keygen /localhost/operator | ndnsec-install-cert -
+fi
+
+#DEBHELPER#
+
+exit 0

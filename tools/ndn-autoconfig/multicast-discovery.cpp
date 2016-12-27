@@ -25,8 +25,6 @@
 
 #include "multicast-discovery.hpp"
 
-#include <ndn-cxx/util/segment-fetcher.hpp>
-
 namespace ndn {
 namespace tools {
 namespace autoconfig {
@@ -36,8 +34,8 @@ static const Name LOCALHOP_HUB_DISCOVERY_PREFIX = "/localhop/ndn-autoconf/hub";
 MulticastDiscovery::MulticastDiscovery(Face& face, KeyChain& keyChain,
                                        const NextStageCallback& nextStageOnFailure)
   : Base(face, keyChain, nextStageOnFailure)
-  , nRequestedRegs(0)
-  , nFinishedRegs(0)
+  , m_nRequestedRegs(0)
+  , m_nFinishedRegs(0)
 {
 }
 
@@ -46,69 +44,47 @@ MulticastDiscovery::start()
 {
   std::cerr << "Trying multicast discovery..." << std::endl;
 
-  util::SegmentFetcher::fetch(m_face, Interest("/localhost/nfd/faces/list"),
-                              m_validator,
-                              [this] (const ConstBufferPtr& data) {
-                                registerHubDiscoveryPrefix(data);
-                              },
-                              [this] (uint32_t code, const std::string& msg) {
-                                m_nextStageOnFailure(msg);
-                              });
+  this->collectMulticastFaces();
 }
 
 void
-MulticastDiscovery::registerHubDiscoveryPrefix(const ConstBufferPtr& buffer)
+MulticastDiscovery::collectMulticastFaces()
+{
+  ndn::nfd::FaceQueryFilter filter;
+  filter.setLinkType(ndn::nfd::LINK_TYPE_MULTI_ACCESS);
+  m_controller.fetch<ndn::nfd::FaceQueryDataset>(
+    filter,
+    bind(&MulticastDiscovery::registerHubDiscoveryPrefix, this, _1),
+    bind(m_nextStageOnFailure, _2)
+  );
+}
+
+void
+MulticastDiscovery::registerHubDiscoveryPrefix(const std::vector<ndn::nfd::FaceStatus>& dataset)
 {
   std::vector<uint64_t> multicastFaces;
-
-  size_t offset = 0;
-  while (offset < buffer->size()) {
-    bool isOk = false;
-    Block block;
-    std::tie(isOk, block) = Block::fromBuffer(buffer, offset);
-    if (!isOk) {
-      std::cerr << "ERROR: cannot decode FaceStatus TLV" << std::endl;
-      break;
-    }
-
-    offset += block.size();
-
-    nfd::FaceStatus faceStatus(block);
-
-    ndn::util::FaceUri uri(faceStatus.getRemoteUri());
-    if (uri.getScheme() == "udp4") {
-      namespace ip = boost::asio::ip;
-      boost::system::error_code ec;
-      ip::address address = ip::address::from_string(uri.getHost(), ec);
-
-      if (!ec && address.is_multicast()) {
-        multicastFaces.push_back(faceStatus.getFaceId());
-      }
-      else
-        continue;
-    }
-  }
+  std::transform(dataset.begin(), dataset.end(), std::back_inserter(multicastFaces),
+                 [] (const ndn::nfd::FaceStatus& faceStatus) { return faceStatus.getFaceId(); });
 
   if (multicastFaces.empty()) {
     m_nextStageOnFailure("No multicast faces available, skipping multicast discovery stage");
   }
   else {
-    nfd::ControlParameters parameters;
+    ControlParameters parameters;
     parameters
       .setName(LOCALHOP_HUB_DISCOVERY_PREFIX)
       .setCost(1)
       .setExpirationPeriod(time::seconds(30));
 
-    nRequestedRegs = multicastFaces.size();
-    nFinishedRegs = 0;
+    m_nRequestedRegs = multicastFaces.size();
+    m_nFinishedRegs = 0;
 
     for (const auto& face : multicastFaces) {
       parameters.setFaceId(face);
-      m_controller.start<nfd::RibRegisterCommand>(parameters,
-                                                  bind(&MulticastDiscovery::onRegisterSuccess,
-                                                       this),
-                                                  bind(&MulticastDiscovery::onRegisterFailure,
-                                                       this, _1));
+      m_controller.start<ndn::nfd::RibRegisterCommand>(
+        parameters,
+        bind(&MulticastDiscovery::onRegisterSuccess, this),
+        bind(&MulticastDiscovery::onRegisterFailure, this, _1));
     }
   }
 }
@@ -116,23 +92,24 @@ MulticastDiscovery::registerHubDiscoveryPrefix(const ConstBufferPtr& buffer)
 void
 MulticastDiscovery::onRegisterSuccess()
 {
-  ++nFinishedRegs;
+  ++m_nFinishedRegs;
 
-  if (nRequestedRegs == nFinishedRegs) {
+  if (m_nRequestedRegs == m_nFinishedRegs) {
     MulticastDiscovery::setStrategy();
   }
 }
 
 void
-MulticastDiscovery::onRegisterFailure(const nfd::ControlResponse& response)
+MulticastDiscovery::onRegisterFailure(const ControlResponse& response)
 {
   std::cerr << "ERROR: " << response.getText() << " (code: " << response.getCode() << ")" << std::endl;
-  --nRequestedRegs;
+  --m_nRequestedRegs;
 
-  if (nRequestedRegs == nFinishedRegs) {
-    if (nRequestedRegs > 0) {
+  if (m_nRequestedRegs == m_nFinishedRegs) {
+    if (m_nRequestedRegs > 0) {
       MulticastDiscovery::setStrategy();
-    } else {
+    }
+    else {
       m_nextStageOnFailure("Failed to register " + LOCALHOP_HUB_DISCOVERY_PREFIX.toUri() +
                            " for all multicast faces, skipping multicast discovery stage");
     }
@@ -142,19 +119,19 @@ MulticastDiscovery::onRegisterFailure(const nfd::ControlResponse& response)
 void
 MulticastDiscovery::setStrategy()
 {
-  nfd::ControlParameters parameters;
+  ControlParameters parameters;
   parameters
     .setName(LOCALHOP_HUB_DISCOVERY_PREFIX)
     .setStrategy("/localhost/nfd/strategy/multicast");
 
-  m_controller.start<nfd::StrategyChoiceSetCommand>(parameters,
-                                                    bind(&MulticastDiscovery::requestHubData, this),
-                                                    bind(&MulticastDiscovery::onSetStrategyFailure,
-                                                         this, _1));
+  m_controller.start<ndn::nfd::StrategyChoiceSetCommand>(
+    parameters,
+    bind(&MulticastDiscovery::requestHubData, this),
+    bind(&MulticastDiscovery::onSetStrategyFailure, this, _1));
 }
 
 void
-MulticastDiscovery::onSetStrategyFailure(const nfd::ControlResponse& response)
+MulticastDiscovery::onSetStrategyFailure(const ControlResponse& response)
 {
   m_nextStageOnFailure("Failed to set multicast strategy for " +
                        LOCALHOP_HUB_DISCOVERY_PREFIX.toUri() + " namespace (" + response.getText() + "). "

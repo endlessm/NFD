@@ -24,10 +24,8 @@
  */
 
 #include "asf-probing-module.hpp"
-
 #include "core/random.hpp"
-
-#include <boost/random/uniform_real_distribution.hpp>
+#include "algorithm.hpp"
 
 namespace nfd {
 namespace fw {
@@ -87,8 +85,9 @@ ProbingModule::getFaceToProbe(const Face& inFace,
     Face& hopFace = hop.getFace();
 
     // Don't send probe Interest back to the incoming face or use the same face
-    // as the forwarded Interest
-    if (hopFace.getId() == inFace.getId() || hopFace.getId() == faceUsed.getId()) {
+    // as the forwarded Interest or use a face that violates scope
+    if (hopFace.getId() == inFace.getId() || hopFace.getId() == faceUsed.getId() ||
+        wouldViolateScope(inFace, interest, hopFace)) {
       continue;
     }
 
@@ -186,8 +185,8 @@ ProbingModule::getProbingProbability(uint64_t rank, uint64_t rankSum, uint64_t n
 double
 ProbingModule::getRandomNumber(double start, double end)
 {
-  boost::random::uniform_real_distribution<double> distribution(start, end);
-  return distribution(getGlobalRng());
+  std::uniform_real_distribution<double> dist(start, end);
+  return dist(getGlobalRng());
 }
 
 } // namespace asf

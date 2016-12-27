@@ -23,7 +23,7 @@
  * NFD, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "pit-algorithm.hpp"
+#include "algorithm.hpp"
 
 namespace nfd {
 namespace scope_prefix {
@@ -34,25 +34,24 @@ const Name LOCALHOP("ndn:/localhop");
 namespace fw {
 
 bool
-violatesScope(const pit::Entry& pitEntry, const Face& outFace)
+wouldViolateScope(const Face& inFace, const Interest& interest, const Face& outFace)
 {
   if (outFace.getScope() == ndn::nfd::FACE_SCOPE_LOCAL) {
+    // forwarding to a local face is always allowed
     return false;
   }
-  BOOST_ASSERT(outFace.getScope() == ndn::nfd::FACE_SCOPE_NON_LOCAL);
 
-  if (scope_prefix::LOCALHOST.isPrefixOf(pitEntry.getName())) {
-    // face is non-local, violates localhost scope
+  if (scope_prefix::LOCALHOST.isPrefixOf(interest.getName())) {
+    // localhost Interests cannot be forwarded to a non-local face
     return true;
   }
 
-  if (scope_prefix::LOCALHOP.isPrefixOf(pitEntry.getName())) {
-    // face is non-local, violates localhop scope unless PIT entry has local in-record
-    return std::none_of(pitEntry.in_begin(), pitEntry.in_end(),
-      [] (const pit::InRecord& inRecord) { return inRecord.getFace().getScope() == ndn::nfd::FACE_SCOPE_LOCAL; });
+  if (scope_prefix::LOCALHOP.isPrefixOf(interest.getName())) {
+    // localhop Interests can be forwarded to a non-local face only if it comes from a local face
+    return inFace.getScope() != ndn::nfd::FACE_SCOPE_LOCAL;
   }
 
-  // Name is not subject to scope control
+  // Interest name is not subject to scope control
   return false;
 }
 
@@ -77,7 +76,7 @@ canForwardToLegacy(const pit::Entry& pitEntry, const Face& face)
     return false;
   }
 
-  return !violatesScope(pitEntry, face);
+  return true;
 }
 
 int
