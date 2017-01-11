@@ -1,0 +1,42 @@
+Source: nfd
+Section: net
+Priority: optional
+Maintainer: Niv Sardi <xaiki@endlessm.com>
+Build-Depends: debhelper (>= 9),
+               dh-waf,
+               dh-python,
+               dh-systemd (>= 1.5),
+               doxygen,
+               libboost-chrono-dev,
+               libboost-dev,
+               libboost-iostreams-dev,
+               libboost-log-dev,
+               libboost-program-options-dev,
+               libboost-regex-dev,
+               libboost-thread-dev,
+               libboost-random-dev,
+               libcrypto++-dev,
+               libndn-cxx-dev,
+               libsqlite3-dev,
+               libssl-dev,
+               libwebsocketpp-dev,
+               pkg-config,
+               python-sphinx,
+               python-sphinxcontrib.doxylink,
+               python | python-all | python-dev | python-all-dev,
+Standards-Version: 3.9.8
+Homepage: https://named-data.net
+Vcs-Git: https://github.com/named-data/NFD
+Vcs-Browser: https://github.com/named-data/NFD
+
+Package: nfd
+Architecture: any
+Depends: lsb-base (>= 3.0-6),
+         ndnsec-tools,
+         ${misc:Depends},
+         ${python:Depends},
+         ${shlibs:Depends}
+Description: Named Data Networking Forwarding Daemon
+ NFD is a network forwarder that implements and evolves together with the
+ Named Data Networking (NDN). After the initial release, NFD will become a
+ core component of the NDN Platform.
