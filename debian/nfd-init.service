@@ -20,9 +20,9 @@ Description=NDN Forwarding Daemon post-init script
 Documentation=man:nfd man:nfdc man:nfd-status
 Wants=nfd.service
 After=nfd.service
+ConditionPathExists=/etc/ndn/nfd-init.sh
 
 [Service]
-ConditionPathExists=/etc/ndn/nfd-init.sh
 Environment=HOME=/var/lib/ndn/nfd
 ExecStart=/bin/sh -ec 'sleep 2; . /etc/ndn/nfd-init.sh;'
 Type=oneshot
