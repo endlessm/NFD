@@ -23,8 +23,9 @@ After=nfd.service
 ConditionPathExists=/etc/ndn/nfd-init.sh
 
 [Service]
-Environment=HOME=/var/lib/ndn/nfd
+Environment=HOME=/var/lib/ndn
 ExecStart=/bin/sh -ec 'sleep 2; . /etc/ndn/nfd-init.sh;'
+User=ndn-user
 Type=oneshot
 RemainAfterExit=yes
 
