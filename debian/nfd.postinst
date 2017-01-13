@@ -1,0 +1,21 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = configure ]; then
+  # Add a user for all NDN related files and processes
+  adduser \
+      --system \
+      --quiet \
+      --home /var/lib/ndn \
+      --disabled-password \
+      --group \
+      ndn-user
+
+  # Set up nfd capabilities
+  # See https://named-data.net/doc/NFD/current/FAQ.html#how-to-run-nfd-as-non-root-user
+  setcap cap_net_raw,cap_net_admin=eip /usr/bin/nfd
+fi
+
+#DEBHELPER#
+
+exit 0

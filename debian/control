@@ -31,7 +31,8 @@ Vcs-Browser: https://github.com/named-data/NFD
 
 Package: nfd
 Architecture: any
-Depends: lsb-base (>= 3.0-6),
+Depends: libcap2-bin,
+         lsb-base (>= 3.0-6),
          ndnsec-tools,
          ${misc:Depends},
          ${python:Depends},

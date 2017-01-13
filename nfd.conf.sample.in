@@ -5,8 +5,8 @@ general
   ; when not performing privileged tasks. NFD does not drop
   ; privileges by default.
 
-  ; user ndn-user
-  ; group ndn-user
+  user ndn-user
+  group ndn-user
 }
 
 log

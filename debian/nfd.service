@@ -30,7 +30,7 @@ After=network-online.target
 
 [Service]
 EnvironmentFile=-/etc/default/nfd
-Environment=HOME=/var/lib/ndn/nfd
+Environment=HOME=/var/lib/ndn
 ExecStart=/usr/bin/nfd --config /etc/ndn/nfd.conf ${OPTIONS}
 Restart=on-failure
 ProtectSystem=full
