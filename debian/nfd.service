@@ -32,6 +32,8 @@ After=nfd-keygen.service
 [Service]
 EnvironmentFile=-/etc/default/nfd
 Environment=HOME=/var/lib/ndn
+Environment=LANG=C
+Environment=LC_ALL=
 User=ndn-user
 ExecStart=/usr/bin/nfd --config /etc/ndn/nfd.conf ${OPTIONS}
 Restart=on-failure
