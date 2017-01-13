@@ -20,26 +20,18 @@
 # You should have received a copy of the GNU General Public License along with
 # NFD, e.g., in COPYING.md file.  If not, see <http://www.gnu.org/licenses/>.
 #
-# Author: Eric Newberry <enewberry@email.arizona.edu>
+# Author: Niv Sardi <xaiki@endlessm.com>
 
 [Unit]
-Description=NDN Forwarding Daemon
-Documentation=man:nfd man:nfdc man:nfd-status
-Wants=network-online.target
-After=network-online.target
-After=nfd-keygen.service
+Description=Generate keys for the NDN Forwarding Daemon
+ConditionPathExists=!/var/lib/ndn/.ndn
 
 [Service]
-EnvironmentFile=-/etc/default/nfd
 Environment=HOME=/var/lib/ndn
+ExecStart=/bin/sh -ec 'if ! ndnsec-get-default >/dev/null; then ndnsec-keygen /localhost/operator | ndnsec-install-cert -; fi;'
+Type=oneshot
+RemainAfterExit=yes
 User=ndn-user
-ExecStart=/usr/bin/nfd --config /etc/ndn/nfd.conf ${OPTIONS}
-Restart=on-failure
-ProtectSystem=full
-PrivateTmp=yes
-PrivateDevices=yes
-ProtectHome=yes
 
 [Install]
 WantedBy=multi-user.target
-Also=nfd-init.service
