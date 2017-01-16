@@ -33,5 +33,8 @@ Type=oneshot
 RemainAfterExit=yes
 User=ndn-user
 
+# Set the syslog identifier so it is not 'sh'
+SyslogIdentifier=nfd-keygen
+
 [Install]
 WantedBy=multi-user.target
