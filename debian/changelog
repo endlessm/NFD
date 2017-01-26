@@ -1,3 +1,11 @@
+nfd (0.5.1-0) experimental; urgency=medium
+
+  * New upstream relase
+    - add versioned dependency on libndn-cxx-dev
+    - add missing dependency on adduser
+
+ -- Niv Sardi <xaiki@debian.org>  Thu, 26 Jan 2017 10:34:58 -0300
+
 nfd (0.5.0-1) experimental; urgency=medium
 
   * Rebase on 0.5.0 for Endless release

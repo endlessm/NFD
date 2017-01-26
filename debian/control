@@ -2,28 +2,29 @@ Source: nfd
 Section: net
 Priority: optional
 Maintainer: Niv Sardi <xaiki@endlessm.com>
-Build-Depends: debhelper (>= 9),
-               dh-waf,
+Build-Depends: adduser,
+               debhelper (>= 9),
                dh-python,
                dh-systemd (>= 1.5),
+               dh-waf,
                doxygen,
                libboost-chrono-dev,
                libboost-dev,
                libboost-iostreams-dev,
                libboost-log-dev,
                libboost-program-options-dev,
+               libboost-random-dev,
                libboost-regex-dev,
                libboost-thread-dev,
-               libboost-random-dev,
                libcrypto++-dev,
-               libndn-cxx-dev,
+               libndn-cxx-dev (>= 0.5.1),
                libsqlite3-dev,
                libssl-dev,
                libwebsocketpp-dev,
                pkg-config,
-               python-sphinx,
-               python-sphinxcontrib.doxylink,
                python | python-all | python-dev | python-all-dev,
+               python-sphinx,
+               python-sphinxcontrib.doxylink
 Standards-Version: 3.9.8
 Homepage: https://named-data.net
 Vcs-Git: https://github.com/named-data/NFD
